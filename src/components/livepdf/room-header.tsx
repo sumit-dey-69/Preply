@@ -58,7 +58,7 @@ export function RoomHeader({
             <FileText className="h-4 w-4" />
           </div>
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-semibold">{roomName || "LivePDF Room"}</p>
+            <p className="truncate text-sm font-semibold">{roomName || "Preply"}</p>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={copyCode}
