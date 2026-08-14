@@ -1,0 +1,41 @@
+# LivePDF Room — Docker Compose
+# One app container (Next.js + API + Socket.IO) + one PostgreSQL container.
+# Usage: docker compose up --build
+services:
+  app:
+    build:
+      context: .
+    container_name: livepdf-app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - PORT=3000
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pdf_storage:/app/storage/pdfs
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: livepdf-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pdf_storage:
+  pg_data:
