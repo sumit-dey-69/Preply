@@ -1,0 +1,113 @@
+// LivePDF Room — Prisma schema
+// NOTE: The runtime sandbox uses SQLite. The Docker reference deployment uses PostgreSQL.
+// The provider is driven by the DATABASE_URL env var pattern. For the sandbox we keep SQLite.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Room {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String?
+  passwordHash String?  // null = no password; set = room is locked
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  pdfs         PDF[]
+  participants Participant[]
+  chatMessages ChatMessage[]
+  markers      QuestionMarker[]
+  notes        SharedNote?
+  annotations  Annotation[]
+}
+
+model PDF {
+  id            String   @id @default(cuid())
+  roomId        String
+  room          Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  originalName  String
+  storedName    String
+  mimeType      String
+  fileSize      Int
+  storagePath   String
+  uploadedById  String?
+  uploadedByName String?
+  createdAt     DateTime @default(now())
+
+  @@index([roomId])
+}
+
+model Participant {
+  id           String   @id @default(cuid())
+  roomId       String
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  displayName  String
+  // ephemeral session id stored on the client (localStorage), not a real account
+  sessionId    String
+  isPresenter  Boolean  @default(false)
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@unique([roomId, sessionId])
+  @@index([roomId])
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  authorId    String
+  authorName  String
+  text        String
+  createdAt   DateTime @default(now())
+
+  @@index([roomId])
+}
+
+model QuestionMarker {
+  id            String   @id @default(cuid())
+  roomId        String
+  room          Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  pdfId         String
+  page          Int
+  label         String
+  color         String   @default("amber")
+  createdBy     String
+  createdByName String
+  createdAt     DateTime @default(now())
+
+  @@index([roomId])
+  @@index([pdfId])
+}
+
+model SharedNote {
+  id          String   @id @default(cuid())
+  roomId      String   @unique
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  content     String   @default("")
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  updatedByName String?
+}
+
+model Annotation {
+  id            String   @id @default(cuid())
+  roomId        String
+  room          Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  pdfId         String
+  page          Int
+  tool          String   @default("pen")
+  color         String   @default("amber")
+  points        String   // JSON-encoded array of {x,y} normalized 0..1
+  createdBy     String
+  createdByName String
+  createdAt     DateTime @default(now())
+
+  @@index([roomId])
+  @@index([pdfId])
+}
