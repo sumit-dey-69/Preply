@@ -15,23 +15,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LivePDF Room — Collaborative PDF Study Room",
+  title: "Preply — Collaborative PDF Study Room",
   description: "Real-time collaborative PDF study room. Create a room, share the code, and solve questions together with synchronized PDF viewing, timers, and live presence.",
-  keywords: ["LivePDF", "collaborative PDF", "study room", "real-time", "Socket.IO", "Next.js", "PDF sync"],
-  authors: [{ name: "LivePDF Room" }],
+  keywords: ["Preply", "collaborative PDF", "study room", "real-time", "Socket.IO", "Next.js", "PDF sync"],
+  authors: [{ name: "Preply" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "LivePDF Room",
+    title: "Preply",
     description: "Real-time collaborative PDF study room",
     url: "https://chat.z.ai",
-    siteName: "LivePDF Room",
+    siteName: "Preply",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "LivePDF Room",
+    title: "Preply",
     description: "Real-time collaborative PDF study room",
   },
 };

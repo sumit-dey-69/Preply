@@ -1,0 +1,15 @@
+FROM oven/bun:1
+WORKDIR /app
+
+# Copy the sync service package.json and install deps
+COPY mini-services/livepdf-sync/package.json ./mini-services/livepdf-sync/package.json
+RUN cd mini-services/livepdf-sync && bun install
+
+# Copy the sync service source
+COPY mini-services/livepdf-sync/ ./mini-services/livepdf-sync/
+
+# Copy the shared lib that the sync service imports (../../src/lib/...)
+COPY src/lib/ ./src/lib/
+
+EXPOSE 3002
+CMD ["bun", "run", "/app/mini-services/livepdf-sync/index.ts"]

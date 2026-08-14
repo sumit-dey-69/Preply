@@ -76,7 +76,7 @@ export function useChatNotifications() {
       if (!("Notification" in window)) return;
       if (Notification.permission !== "granted") return;
       if (document.visibilityState === "visible") return; // only when tab hidden
-      const n = new Notification(`${author} in LivePDF Room`, {
+      const n = new Notification(`${author} in Preply`, {
         body: text.slice(0, 200),
         tag: "livepdf-chat",
         silent: true, // we play our own chime

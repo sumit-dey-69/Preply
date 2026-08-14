@@ -138,7 +138,7 @@ export default function Home() {
               <FileText className="h-5 w-5" />
             </div>
             <div className="leading-none">
-              <p className="text-base font-semibold tracking-tight">LivePDF Room</p>
+              <p className="text-base font-semibold tracking-tight">Preply</p>
               <p className="text-[11px] text-muted-foreground">Collaborative PDF study room</p>
             </div>
           </div>
@@ -298,7 +298,7 @@ export default function Home() {
 
       <footer className="mt-auto border-t bg-background/80">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:px-6">
-          <p>LivePDF Room — real-time collaborative PDF study room.</p>
+          <p>Preply — real-time collaborative PDF study room.</p>
           <p>Built with Next.js · Socket.IO · Prisma · react-pdf</p>
         </div>
       </footer>
