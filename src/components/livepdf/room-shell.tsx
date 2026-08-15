@@ -33,6 +33,7 @@ import {
   Activity,
   PanelRightOpen,
   UserX,
+  Clock,
 } from "lucide-react";
 import { formatTimer } from "@/lib/types";
 
@@ -172,6 +173,38 @@ export function RoomShell({ room }: { room: { id: string; code: string; name: st
   const [mobileTab, setMobileTab] = useState("viewer");
   const [rightTab, setRightTab] = useState("timer");
   const [mobileRightTab, setMobileRightTab] = useState("timer");
+  const [showLeftPanel, setShowLeftPanel] = useState(true);
+  const [showRightPanel, setShowRightPanel] = useState(true);
+
+  // Keyboard shortcuts: H = toggle left, J = toggle right, B = toggle both
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isTyping = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isTyping) return;
+      if (e.key === "h" || e.key === "H") {
+        if (!(e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          setShowLeftPanel((v) => !v);
+        }
+      }
+      if (e.key === "j" || e.key === "J") {
+        if (!(e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          setShowRightPanel((v) => !v);
+        }
+      }
+      if (e.key === "b" || e.key === "B") {
+        if (!(e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          setShowLeftPanel((v) => !v);
+          setShowRightPanel((v) => !v);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // unread chat tracking
   const lastReadChatLenRef = useRef(chat.length);
@@ -207,39 +240,43 @@ export function RoomShell({ room }: { room: { id: string; code: string; name: st
 
       {/* Desktop layout: resizable 3 columns */}
       <div className="hidden min-h-0 flex-1 md:block">
-        <ResizablePanelGroup direction="horizontal" autoSaveId="livepdf-layout">
+        <ResizablePanelGroup direction="horizontal" autoSaveId="livepdf-layout-v2">
           {/* left: PDF list */}
-          <ResizablePanel defaultSize={18} minSize={14} maxSize={28} className="rounded-none">
-            <aside className="flex h-full flex-col border-r bg-card">
-              <PdfList />
-            </aside>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
+          {showLeftPanel && (
+            <ResizablePanel defaultSize={18} minSize={14} maxSize={28} className="rounded-none">
+              <aside className="flex h-full flex-col border-r bg-card">
+                <PdfList />
+              </aside>
+            </ResizablePanel>
+          )}
+          {showLeftPanel && <ResizableHandle withHandle />}
           {/* center: viewer */}
-          <ResizablePanel defaultSize={55} minSize={35}>
+          <ResizablePanel defaultSize={showLeftPanel && showRightPanel ? 55 : showLeftPanel || showRightPanel ? 75 : 95} minSize={35}>
             <main className="h-full p-2.5">
               <PdfViewer />
             </main>
           </ResizablePanel>
-          <ResizableHandle withHandle />
+          {showRightPanel && <ResizableHandle withHandle />}
           {/* right: tabbed panels + presenter */}
-          <ResizablePanel defaultSize={27} minSize={20} maxSize={36} className="rounded-none">
-            <aside className="flex h-full flex-col border-l bg-card">
-              <CompactTimerStrip onClick={() => setRightTab("timer")} />
-              <div className="min-h-0 flex-1">
-                <RightTabs
-                  value={rightTab}
-                  onChange={setRightTab}
-                  unreadChat={unreadChat}
-                  markerCount={markerCount}
-                  participantCount={participants.length}
-                />
-              </div>
-              <div className="max-h-[40%] shrink-0 overflow-auto border-t p-2.5">
-                <PresenterControls />
-              </div>
-            </aside>
-          </ResizablePanel>
+          {showRightPanel && (
+            <ResizablePanel defaultSize={27} minSize={20} maxSize={36} className="rounded-none">
+              <aside className="flex h-full flex-col border-l bg-card">
+                <CompactTimerStrip onClick={() => setRightTab("timer")} />
+                <div className="min-h-0 flex-1">
+                  <RightTabs
+                    value={rightTab}
+                    onChange={setRightTab}
+                    unreadChat={unreadChat}
+                    markerCount={markerCount}
+                    participantCount={participants.length}
+                  />
+                </div>
+                <div className="max-h-[40%] shrink-0 overflow-auto border-t p-2.5">
+                  <PresenterControls />
+                </div>
+              </aside>
+            </ResizablePanel>
+          )}
         </ResizablePanelGroup>
       </div>
 
@@ -286,7 +323,15 @@ export function RoomShell({ room }: { room: { id: string; code: string; name: st
 
       {/* Sticky status bar */}
       <footer className="z-20 flex h-9 shrink-0 items-center justify-between gap-3 border-t bg-background/90 px-3 text-xs backdrop-blur sm:px-4">
-        <ConnectionIndicator />
+        <div className="flex items-center gap-3">
+          <ConnectionIndicator />
+          {room?.createdAt && (
+            <span className="hidden items-center gap-1 text-muted-foreground md:inline-flex">
+              <Clock className="h-3 w-3" />
+              Session: <SessionTime createdAt={room.createdAt} />
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3 text-muted-foreground">
           {viewer.pdfId && (viewer.totalPages || viewer.currentPage) > 0 && (
             <span>
@@ -307,4 +352,23 @@ export function RoomShell({ room }: { room: { id: string; code: string; name: st
       </footer>
     </div>
   );
+}
+
+function SessionTime({ createdAt }: { createdAt: string }) {
+  const [elapsed, setElapsed] = useState("");
+  useEffect(() => {
+    const update = () => {
+      const created = new Date(createdAt).getTime();
+      const diff = Date.now() - created;
+      if (diff < 0) { setElapsed("0m"); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      if (h > 0) setElapsed(`${h}h ${m}m`);
+      else setElapsed(`${m}m`);
+    };
+    update();
+    const t = setInterval(update, 60000);
+    return () => clearInterval(t);
+  }, [createdAt]);
+  return <span className="font-medium text-foreground">{elapsed}</span>;
 }

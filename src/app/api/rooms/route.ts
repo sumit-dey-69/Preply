@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createRoomSchema } from "@/lib/validation";
 import { generateRoomCode } from "@/lib/constants";
+import { randomBytes } from "crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,12 @@ export async function POST(req: NextRequest) {
     }
     const { name, hostName } = parsed.data;
 
+    // Optional: invite-only + expiry (from body)
+    const inviteOnly = body.inviteOnly === true;
+    const expiryHours = typeof body.expiryHours === "number" && body.expiryHours > 0
+      ? Math.min(body.expiryHours, 168) // max 7 days
+      : null;
+
     let code = generateRoomCode();
     let existing = await db.room.findUnique({ where: { code } });
     let attempts = 0;
@@ -27,10 +34,17 @@ export async function POST(req: NextRequest) {
       attempts++;
     }
 
+    const inviteToken = inviteOnly ? randomBytes(8).toString("hex") : null;
+    const expiresAt = expiryHours
+      ? new Date(Date.now() + expiryHours * 3600 * 1000)
+      : null;
+
     const room = await db.room.create({
       data: {
         code,
         name: name || `${hostName}'s Study Room`,
+        inviteToken,
+        expiresAt,
       },
     });
 
@@ -40,6 +54,8 @@ export async function POST(req: NextRequest) {
         code: room.code,
         name: room.name,
         createdAt: room.createdAt,
+        inviteToken: room.inviteToken,
+        expiresAt: room.expiresAt,
       },
     });
   } catch (e) {
@@ -49,5 +65,5 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  return NextResponse.json({ service: "livepdf-rooms-api", ok: true });
+  return NextResponse.json({ service: "preply-rooms-api", ok: true });
 }

@@ -25,7 +25,9 @@ import {
   Pencil,
   Download,
   ListTree,
+  MoreVertical,
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from "@/lib/constants";
 import { ThumbnailsOverlay } from "./thumbnails-overlay";
 import { SearchOverlay } from "./search-overlay";
@@ -420,79 +422,7 @@ export function PdfViewer() {
 
         <div className="mx-1 h-5 w-px bg-border" />
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => {
-            if (!viewer.pdfId) return;
-            const label = window.prompt("Label this question (optional):", `Question on page ${viewer.currentPage || 1}`);
-            if (label === null) return; // cancelled
-            sync.addMarker(viewer.pdfId, viewer.currentPage || 1, label, "amber");
-          }}
-          disabled={!viewer.pdfId}
-          title="Mark this page as a question"
-        >
-          <Bookmark className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={async () => {
-            if (!viewer.pdfId) return;
-            try {
-              const pageAnnotations = sync.annotations
-                .filter((a) => a.pdfId === viewer.pdfId && a.page === (viewer.currentPage || 1))
-                .map((a) => ({ tool: a.tool, color: a.color, points: a.points }));
-              await exportPageAsPng({
-                pdfUrl: `/api/pdfs/${viewer.pdfId}`,
-                page: viewer.currentPage || 1,
-                annotations: pageAnnotations,
-                filename: `page-${viewer.currentPage || 1}.png`,
-              });
-            } catch (e) {
-              console.error("export failed", e);
-            }
-          }}
-          disabled={!viewer.pdfId}
-          title="Download this page (with annotations) as PNG"
-        >
-          <Download className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={rotate} disabled={!canControl} title="Rotate">
-          <RotateCw className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn("h-8 w-8", showThumbnails && "bg-accent text-accent-foreground")}
-          onClick={() => setShowThumbnails((v) => !v)}
-          disabled={!viewer.pdfId}
-          title="Page thumbnails"
-        >
-          <LayoutGrid className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn("h-8 w-8", showSearch && "bg-accent text-accent-foreground")}
-          onClick={() => setShowSearch((v) => !v)}
-          disabled={!viewer.pdfId}
-          title="Find in document (Ctrl+F)"
-        >
-          <Search className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn("h-8 w-8", showOutline && "bg-accent text-accent-foreground")}
-          onClick={() => setShowOutline((v) => !v)}
-          disabled={!viewer.pdfId}
-          title="PDF outline / table of contents"
-        >
-          <ListTree className="h-4 w-4" />
-        </Button>
+        {/* Annotate + Fullscreen (primary tools) */}
         <Button
           variant="ghost"
           size="icon"
@@ -506,6 +436,54 @@ export function PdfViewer() {
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </Button>
+
+        {/* Secondary tools in a dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!viewer.pdfId} title="More tools">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem onClick={() => setShowThumbnails((v) => !v)} className={cn(showThumbnails && "bg-accent")}>
+              <LayoutGrid className="mr-2 h-4 w-4" /> Thumbnails
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowSearch((v) => !v)} className={cn(showSearch && "bg-accent")}>
+              <Search className="mr-2 h-4 w-4" /> Find (Ctrl+F)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowOutline((v) => !v)} className={cn(showOutline && "bg-accent")}>
+              <ListTree className="mr-2 h-4 w-4" /> Outline
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={rotate} disabled={!canControl}>
+              <RotateCw className="mr-2 h-4 w-4" /> Rotate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => {
+              if (!viewer.pdfId) return;
+              const label = window.prompt("Label this question (optional):", `Question on page ${viewer.currentPage || 1}`);
+              if (label === null) return;
+              sync.addMarker(viewer.pdfId, viewer.currentPage || 1, label, "amber");
+            }}>
+              <Bookmark className="mr-2 h-4 w-4" /> Bookmark page
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={async () => {
+              if (!viewer.pdfId) return;
+              try {
+                const pageAnnotations = sync.annotations
+                  .filter((a) => a.pdfId === viewer.pdfId && a.page === (viewer.currentPage || 1))
+                  .map((a) => ({ tool: a.tool, color: a.color, points: a.points }));
+                await exportPageAsPng({
+                  pdfUrl: `/api/pdfs/${viewer.pdfId}`,
+                  page: viewer.currentPage || 1,
+                  annotations: pageAnnotations,
+                  filename: `page-${viewer.currentPage || 1}.png`,
+                });
+              } catch (e) { console.error("export failed", e); }
+            }}>
+              <Download className="mr-2 h-4 w-4" /> Export page as PNG
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="ml-auto flex items-center gap-2">
           {numPages > 0 && (

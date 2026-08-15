@@ -16,6 +16,8 @@ model Room {
   code         String   @unique
   name         String?
   passwordHash String?  // null = no password; set = room is locked
+  inviteToken  String?  // null = open; set = invite-only (must use ?invite=TOKEN to join)
+  expiresAt    DateTime? // null = no expiry; set = room auto-closes after this time
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   pdfs         PDF[]

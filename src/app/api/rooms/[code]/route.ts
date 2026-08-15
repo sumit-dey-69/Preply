@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { roomCodeSchema } from "@/lib/validation";
 import { z } from "zod";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { randomBytes } from "crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,9 @@ const updateSchema = z.object({
   name: z.string().trim().min(1, "Room name required").max(60, "Name too long").optional(),
   password: z.string().trim().min(1, "Password required").max(100, "Password too long").optional(),
   removePassword: z.boolean().optional(),
+  inviteOnly: z.boolean().optional(),
+  expiryHours: z.number().min(1).max(168).optional(),
+  removeExpiry: z.boolean().optional(),
 });
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ code: string }> }) {
@@ -37,9 +41,26 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ code: strin
     return NextResponse.json({ error: "Room not found" }, { status: 404 });
   }
 
+  // Check if room has expired
+  if (room.expiresAt && new Date(room.expiresAt) < new Date()) {
+    return NextResponse.json({ error: "Room has expired", expired: true }, { status: 410 });
+  }
+
+  const url = new URL(req.url, "http://localhost");
+
+  // If invite-only, require ?invite=TOKEN
+  if (room.inviteToken) {
+    const providedInvite = url.searchParams.get("invite") || "";
+    if (providedInvite !== room.inviteToken) {
+      return NextResponse.json(
+        { error: "Invite-only room", inviteOnly: true },
+        { status: 403 }
+      );
+    }
+  }
+
   // If the room has a password, require it via ?password= query (or X-Password header)
   if (room.passwordHash) {
-    const url = new URL(req.url, "http://localhost");
     const provided = url.searchParams.get("password") || req.headers.get("x-room-password") || "";
     if (!verifyPassword(provided, room.passwordHash)) {
       return NextResponse.json(
@@ -56,6 +77,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ code: strin
       name: room.name,
       createdAt: room.createdAt,
       hasPassword: !!room.passwordHash,
+      inviteOnly: !!room.inviteToken,
+      expiresAt: room.expiresAt,
     },
     pdfs: room.pdfs,
   });
@@ -81,11 +104,23 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ code: str
   } else if (parsed.data.password !== undefined) {
     data.passwordHash = hashPassword(parsed.data.password);
   }
+  // Invite-only toggle
+  if (parsed.data.inviteOnly === true) {
+    data.inviteToken = randomBytes(8).toString("hex");
+  } else if (parsed.data.inviteOnly === false) {
+    data.inviteToken = null;
+  }
+  // Expiry
+  if (parsed.data.removeExpiry) {
+    data.expiresAt = null;
+  } else if (parsed.data.expiryHours) {
+    data.expiresAt = new Date(Date.now() + parsed.data.expiryHours * 3600 * 1000);
+  }
 
   const room = await db.room.update({
     where: { code: upper },
     data,
-    select: { id: true, code: true, name: true, passwordHash: true },
+    select: { id: true, code: true, name: true, passwordHash: true, inviteToken: true, expiresAt: true },
   });
 
   return NextResponse.json({
@@ -94,6 +129,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ code: str
       code: room.code,
       name: room.name,
       hasPassword: !!room.passwordHash,
+      inviteOnly: !!room.inviteToken,
+      inviteToken: room.inviteToken,
+      expiresAt: room.expiresAt,
     },
   });
 }

@@ -11,6 +11,9 @@ import { Keyboard, Search, Undo2, Redo2, ArrowLeft, ArrowRight } from "lucide-re
 
 const SHORTCUTS = [
   { keys: ["Ctrl", "Scroll"], desc: "Zoom in / out (desktop)", icon: Search },
+  { keys: ["H"], desc: "Toggle left panel (PDF list)", icon: Keyboard },
+  { keys: ["J"], desc: "Toggle right panel (tabs)", icon: Keyboard },
+  { keys: ["B"], desc: "Toggle both panels", icon: Keyboard },
   { keys: ["Ctrl", "F"], desc: "Find in document (open search)", icon: Search },
   { keys: ["Ctrl", "Z"], desc: "Undo last annotation (in annotate mode)", icon: Undo2 },
   { keys: ["Ctrl", "Y"], desc: "Redo annotation (in annotate mode)", icon: Redo2 },
