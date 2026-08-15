@@ -1,4 +1,4 @@
-# ---- Preply — single application container ----
+# ---- LivePDF Room — single application container ----
 # Contains: Next.js (frontend + API) + Node.js Socket.IO sync service.
 # PostgreSQL runs in a separate container (see docker-compose.yml).
 

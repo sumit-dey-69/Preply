@@ -1,4 +1,4 @@
-// Shared constants for Preply
+// Shared constants for LivePDF Room
 
 export const SYNC_SOCKET_PORT = 3002;
 

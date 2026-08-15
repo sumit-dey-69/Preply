@@ -1,8 +1,8 @@
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/toaster";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Preply — Collaborative PDF Study Room",
   description: "Real-time collaborative PDF study room. Create a room, share the code, and solve questions together with synchronized PDF viewing, timers, and live presence.",
-  keywords: ["LivePDF", "collaborative PDF", "study room", "real-time", "Socket.IO", "Next.js", "PDF sync"],
+  keywords: ["Preply", "collaborative PDF", "study room", "real-time", "Socket.IO", "Next.js", "PDF sync"],
   authors: [{ name: "Preply" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",

@@ -1,6 +1,6 @@
-# Preply — Local Setup Guide
+# LivePDF Room — Local Setup Guide
 
-A complete guide to run **Preply** on your local PC. Two options are
+A complete guide to run **LivePDF Room** on your local PC. Two options are
 provided: a **quick local dev setup** (SQLite, two terminals) and a **Docker
 production setup** (PostgreSQL, one command).
 
@@ -181,7 +181,7 @@ docker compose down -v
 
 ## How to test the real-time sync
 
-Preply is designed for **two or more participants**. To test it locally:
+LivePDF Room is designed for **two or more participants**. To test it locally:
 
 1. Open `http://localhost:3000` in **Browser Tab A** (e.g. Chrome)
 2. Enter name "Alice" → **Create room** → note the room code
