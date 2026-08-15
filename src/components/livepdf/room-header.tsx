@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useRoomSync } from "./room-sync-provider";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
-import { FileText, Copy, Check, Users, LogOut, Link2, Settings, Keyboard } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Check, Copy, FileText, Keyboard, Link2, LogOut, Settings, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { RoomSettingsDialog } from "./room-settings-dialog";
+import { useRoomSync } from "./room-sync-provider";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 
 export function RoomHeader({
