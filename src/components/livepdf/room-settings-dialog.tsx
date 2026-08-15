@@ -17,8 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Copy, Check, Trash2, LogOut, Calendar, Users, FileText, Hash, Lock, Unlock, ShieldCheck } from "lucide-react";
+import { Settings, Copy, Check, Trash2, LogOut, Calendar, Users, FileText, Hash, Lock, Unlock, ShieldCheck, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { Switch } from "@/components/ui/switch";
 
 export function RoomSettingsDialog({
   open,
@@ -43,14 +44,23 @@ export function RoomSettingsDialog({
   const [password, setPassword] = useState("");
   const [hasPassword, setHasPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [inviteOnly, setInviteOnly] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [expiryHours, setExpiryHours] = useState("");
 
-  // fetch password status when dialog opens
+  // fetch room settings when dialog opens
   useEffect(() => {
     if (!open) return;
     fetch(`/api/rooms/${sync.roomCode}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.room) setHasPassword(!!data.room.hasPassword);
+        if (data?.room) {
+          setHasPassword(!!data.room.hasPassword);
+          setInviteOnly(!!data.room.inviteOnly);
+          setInviteToken(data.room.inviteToken || null);
+          setExpiresAt(data.room.expiresAt || null);
+        }
       })
       .catch(() => {});
   }, [open, sync.roomCode]);
@@ -317,6 +327,128 @@ export function RoomSettingsDialog({
                   ? "Only people with the password can view this room."
                   : "Anyone with the room code can join. Set a password to restrict access."}
               </p>
+            </div>
+          ) : null}
+
+          <Separator />
+
+          {/* invite-only + expiry (host only) */}
+          {isHost ? (
+            <div className="space-y-3">
+              {/* invite-only */}
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <Label className="flex items-center gap-1.5 text-xs font-medium">
+                    <Lock className="h-3.5 w-3.5" /> Invite-only
+                  </Label>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    Only people with the invite link can join.
+                  </p>
+                </div>
+                <Switch
+                  checked={inviteOnly}
+                  onCheckedChange={async (v) => {
+                    setInviteOnly(v);
+                    try {
+                      const res = await fetch(`/api/rooms/${sync.roomCode}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ inviteOnly: v }),
+                      });
+                      const data = await res.json();
+                      if (res.ok) {
+                        setInviteToken(data.room.inviteToken || null);
+                        toast({ title: v ? "Invite-only enabled" : "Room is now open" });
+                      }
+                    } catch {}
+                  }}
+                />
+              </div>
+              {inviteOnly && inviteToken && (
+                <div className="flex items-center gap-1.5 rounded-lg border bg-muted/30 px-2.5 py-1.5">
+                  <Input
+                    readOnly
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/room/${sync.roomCode}?invite=${inviteToken}`}
+                    className="h-7 flex-1 text-[11px] font-mono"
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/room/${sync.roomCode}?invite=${inviteToken}`);
+                      toast({ title: "Invite link copied" });
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+
+              {/* expiry */}
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <Label className="flex items-center gap-1.5 text-xs font-medium">
+                    <Clock className="h-3.5 w-3.5" /> Link expiry
+                  </Label>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    {expiresAt
+                      ? `Expires ${new Date(expiresAt).toLocaleString()}`
+                      : "Auto-close room after a set time."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  value={expiryHours}
+                  onChange={(e) => setExpiryHours(e.target.value)}
+                  placeholder="Hours (e.g. 24)"
+                  className="h-8 text-xs"
+                  min={1}
+                  max={168}
+                />
+                <Button
+                  size="sm"
+                  className="h-8 shrink-0 text-xs"
+                  onClick={async () => {
+                    const h = parseInt(expiryHours, 10);
+                    if (!h || h < 1) return;
+                    const res = await fetch(`/api/rooms/${sync.roomCode}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ expiryHours: h }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setExpiresAt(data.room.expiresAt);
+                      toast({ title: `Room expires in ${h} hours` });
+                    }
+                  }}
+                >
+                  Set
+                </Button>
+                {expiresAt && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 shrink-0 text-xs"
+                    onClick={async () => {
+                      const res = await fetch(`/api/rooms/${sync.roomCode}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ removeExpiry: true }),
+                      });
+                      if (res.ok) {
+                        setExpiresAt(null);
+                        toast({ title: "Expiry removed" });
+                      }
+                    }}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
             </div>
           ) : null}
 

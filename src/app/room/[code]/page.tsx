@@ -7,7 +7,7 @@ import { RoomShell } from "@/components/livepdf/room-shell";
 import { NameGate } from "@/components/livepdf/name-gate";
 import { loadLocalParticipant, setDisplayName } from "@/lib/participant";
 import { addRecentRoom } from "@/lib/recent-rooms";
-import { Loader2, FileQuestion, ArrowLeft, Lock } from "lucide-react";
+import { Loader2, FileQuestion, ArrowLeft, Lock, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ interface RoomInfo {
   hasPassword?: boolean;
 }
 
-type Status = "loading" | "not_found" | "ready" | "need_name" | "locked";
+type Status = "loading" | "not_found" | "ready" | "need_name" | "locked" | "expired";
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
@@ -71,7 +71,13 @@ export default function RoomPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/rooms/${code}`);
+        // Check for invite token in URL query
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteToken = urlParams.get("invite");
+        const fetchUrl = inviteToken
+          ? `/api/rooms/${code}?invite=${inviteToken}`
+          : `/api/rooms/${code}`;
+        const res = await fetch(fetchUrl);
         // Always try to parse JSON, even on error responses
         const data = await res.json().catch(() => ({}));
 
@@ -79,6 +85,16 @@ export default function RoomPage() {
 
         if (res.status === 401 && data.locked) {
           setStatus("locked");
+          return;
+        }
+
+        if (res.status === 403 && data.inviteOnly) {
+          setStatus("not_found"); // treat as not found — they need the invite link
+          return;
+        }
+
+        if (res.status === 410 && data.expired) {
+          setStatus("expired");
           return;
         }
 
@@ -164,7 +180,7 @@ export default function RoomPage() {
         <div>
           <h1 className="text-xl font-semibold">Room not found</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            The room <span className="font-mono font-medium">{code}</span> doesn’t exist or has been closed.
+            The room <span className="font-mono font-medium">{code}</span> doesn’t exist, is invite-only, or has been closed.
           </p>
         </div>
         <Button onClick={() => router.push("/")} variant="outline">
@@ -174,7 +190,26 @@ export default function RoomPage() {
     );
   }
 
-  if (status === "locked") {
+  if (status === "expired") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600">
+          <Clock className="h-7 w-7" />
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold">Room expired</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            This room has expired and is no longer accessible.
+          </p>
+        </div>
+        <Button onClick={() => router.push("/")} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to home
+        </Button>
+      </div>
+    );
+  }
+
+if (status === "locked") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
         <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
