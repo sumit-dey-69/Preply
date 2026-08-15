@@ -41,41 +41,75 @@ Traditional study groups usually end up with screenshots, screen sharing, or mes
 
 ## How it works
 
+Preply is deployed as a **distributed application**. The frontend, database, and real-time synchronization layer run as separate services so each part can use infrastructure suited to its workload.
+
 ```text
-┌──────────────────────────────┐
-│            Browser           │
-│        Student A / B / ...   │
-└──────────────┬───────────────┘
-               │
-        HTTP + WebSocket
-               │
-               ▼
-┌──────────────────────────────────────────┐
-│              App Container               │
-│                                          │
-│  Next.js                                 │
-│  ├─ Web UI                               │
-│  ├─ REST API                             │
-│  ├─ PDF serving/storage                  │
-│  └─ application runtime                  │
-│                                          │
-│  Socket.IO                               │
-│  ├─ viewer synchronization               │
-│  ├─ presence + collaboration             │
-│  ├─ timers                               │
-│  └─ presenter controls                   │
-└──────────────────┬───────────────────────┘
-                   │ Prisma
-                   ▼
-        ┌──────────────────────┐
-        │      PostgreSQL      │
-        │ rooms / PDFs / chat  │
-        │ notes / markers /    │
-        │ annotations / users  │
-        └──────────────────────┘
+                         ┌─────────────────────────┐
+                         │        Students         │
+                         │   Browser / Mobile Web  │
+                         └────────────┬────────────┘
+                                      │
+                         HTTPS + WebSocket connection
+                                      │
+                 ┌────────────────────┴────────────────────┐
+                 │                                         │
+                 ▼                                         ▼
+      ┌─────────────────────┐                  ┌─────────────────────┐
+      │       Vercel        │                  │       Render        │
+      │                     │                  │                     │
+      │     Next.js 16      │                  │   Socket.IO Sync    │
+      │   Frontend + API    │◄────────────────►│  Real-time service  │
+      │                     │                  │                     │
+      └──────────┬──────────┘                  └──────────┬──────────┘
+                 │                                        │
+                 │ Prisma                                 │ Room state /
+                 │                                        │ live events
+                 ▼                                        │
+      ┌─────────────────────┐                             │
+      │        Neon         │                             │
+      │                     │                             │
+      │    PostgreSQL       │◄────────────────────────────┘
+      │                     │
+      │ Rooms / PDFs /      │
+      │ participants / chat │
+      │ notes / markers /   │
+      │ annotations         │
+      └─────────────────────┘
 ```
 
-The browser sends **viewer state**, not PDF bytes, through the real-time layer. The synchronized viewer state is lightweight (`pdf`, `page`, `scroll ratio`, `zoom`, and `rotation`), while PDF files remain in application storage.
+### Hosted architecture
+
+- **Vercel** hosts the Next.js application and frontend.
+- **Neon** provides the managed PostgreSQL database used through Prisma.
+- **Render** runs the long-lived Socket.IO synchronization service responsible for real-time collaboration.
+- The browser communicates with **Vercel over HTTPS** for the application/API and with **Render over WebSocket** for live synchronization.
+- Database state is persisted in **Neon**, while transient real-time room state is coordinated by the Socket.IO service.
+
+The separation is important because the real-time layer requires a persistent server process, whereas the Next.js application can be deployed through Vercel's serverless/managed infrastructure.
+
+### What gets synchronized?
+
+Preply sends lightweight viewer and collaboration state through Socket.IO rather than sending PDF bytes between participants.
+
+```text
+Viewer state
+├── PDF selection
+├── Current page
+├── Scroll ratio
+├── Zoom level
+└── Rotation
+
+Collaboration state
+├── Participants / presence
+├── Timer state
+├── Presenter state
+├── Chat messages
+├── Question markers
+├── Shared notes
+└── PDF annotations
+```
+
+PDF files themselves remain managed by the application rather than being transmitted through every WebSocket update.
 
 ### Real-time synchronization
 
@@ -86,6 +120,18 @@ Preply treats synchronization as a server-coordinated state problem rather than 
 - **Loop prevention:** synchronization metadata identifies the source of changes and remote-applied updates are prevented from immediately echoing back as local changes.
 - **Scroll throttling:** high-frequency scroll updates are throttled and flushed so the two viewers converge without flooding the socket.
 - **Normalized coordinates:** annotations use normalized page coordinates so drawings remain meaningful across different viewport sizes.
+
+## Deployment stack
+
+The current hosted deployment uses:
+
+| Service | Provider | Responsibility |
+| --- | --- | --- |
+| Frontend / Web App | **Vercel** | Next.js application and frontend delivery |
+| Database | **Neon** | Managed PostgreSQL database via Prisma |
+| Live Sync | **Render** | Long-running Socket.IO real-time synchronization service |
+
+This setup keeps the real-time service independent from the frontend deployment and avoids relying on serverless infrastructure for persistent WebSocket connections.
 
 ## Tech stack
 
@@ -107,14 +153,17 @@ Preply treats synchronization as a server-coordinated state problem rather than 
 - **react-pdf / PDF.js** — PDF rendering
 - **Prisma 6** — ORM and schema management
 - **PostgreSQL 16** — production database
+- **Neon** — managed PostgreSQL hosting
 - **SQLite** — lightweight local development option
 - **Zod** — runtime validation
 - **Zustand** — client-side state management where needed
 
 ### Infrastructure
 
-- **Docker + Docker Compose** — reproducible production-like deployment
-- **Caddy** — included reverse-proxy configuration for deployments that use it
+- **Vercel** — frontend/application hosting
+- **Render** — real-time synchronization service hosting
+- **Docker + Docker Compose** — reproducible self-hosted deployment
+- **Caddy** — included reverse-proxy configuration for self-hosted deployments
 - **Bun / npm** — dependency and script execution
 
 ## Project structure
@@ -136,11 +185,11 @@ Preply/
 │   └── pdf.worker.min.mjs         # PDF.js worker used by react-pdf
 │
 ├── storage/
-│   └── pdfs/                      # Local PDF storage location
+│   └── pdfs/                      # Local/self-hosted PDF storage location
 │
 ├── Dockerfile                     # Production application image
 ├── Dockerfile.sync                # Sync-service image definition
-├── docker-compose.yml              # App + PostgreSQL deployment
+├── docker-compose.yml              # App + PostgreSQL self-hosted deployment
 ├── Caddyfile                      # Reverse-proxy configuration
 ├── SETUP.md                       # Detailed local setup guide
 ├── DEPLOYMENT.md                  # Deployment and hosting guide
@@ -164,7 +213,7 @@ For Docker deployment:
 
 ### Option A — Local development
 
-The local workflow uses the development database configured by the repository and runs the Next.js application and Socket.IO synchronization service as separate processes.
+The local workflow runs the Next.js application and Socket.IO synchronization service as separate processes. The repository also supports SQLite for lightweight local development.
 
 ```bash
 git clone https://github.com/sumit-dey-69/Preply.git
@@ -196,11 +245,9 @@ http://localhost:3000
 
 For the complete environment setup, PDF worker instructions, LAN access, troubleshooting, and configuration details, see [`SETUP.md`](./SETUP.md).
 
-### Option B — Docker
+### Option B — Docker / self-hosting
 
-Docker is the recommended way to run a production-like instance with PostgreSQL.
-
-Create your environment file using the values documented in [`DEPLOYMENT.md`](./DEPLOYMENT.md), then start the stack:
+Docker provides a production-like self-hosted deployment with PostgreSQL.
 
 ```bash
 docker compose up --build
@@ -231,21 +278,21 @@ Reset the stack and remove its volumes:
 docker compose down -v
 ```
 
-See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for VPS, cloud, reverse-proxy, and production deployment guidance.
+See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for cloud, VPS, reverse-proxy, and production deployment guidance.
 
 ## Environment variables
 
-The exact environment used by a deployment depends on whether the application is running locally or through Docker. The main configuration values are:
+The exact environment used by a deployment depends on whether the application is running locally, on the hosted stack, or through Docker. The main configuration values are:
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | Prisma database connection string |
+| `DATABASE_URL` | Prisma database connection string; production points to Neon PostgreSQL |
 | `PORT` | Application port; typically `3000` |
-| `NEXT_PUBLIC_APP_URL` | Public URL used by the application |
-| `NEXT_PUBLIC_SYNC_URL` | Optional explicit Socket.IO service URL for local/separate deployments |
-| `POSTGRES_USER` | PostgreSQL username for Docker |
-| `POSTGRES_PASSWORD` | PostgreSQL password for Docker |
-| `POSTGRES_DB` | PostgreSQL database name for Docker |
+| `NEXT_PUBLIC_APP_URL` | Public URL of the deployed application |
+| `NEXT_PUBLIC_SYNC_URL` | URL of the Socket.IO sync service; production points to Render |
+| `POSTGRES_USER` | PostgreSQL username for Docker/self-hosting |
+| `POSTGRES_PASSWORD` | PostgreSQL password for Docker/self-hosting |
+| `POSTGRES_DB` | PostgreSQL database name for Docker/self-hosting |
 
 Do not commit real credentials or production secrets to the repository.
 
@@ -296,7 +343,7 @@ Preply includes several application-level safeguards for uploaded files and coll
 - Restricts presenter controls to authorized participants.
 - Keeps filesystem storage paths on the server rather than sending them to browsers.
 
-This project is intended to be **self-hosted or deployed with an appropriately secured infrastructure**. Review authentication, authorization, rate limiting, HTTPS, reverse-proxy configuration, backups, and secret management before exposing an instance to untrusted public traffic.
+This project is intended to be **self-hosted or deployed with appropriately secured infrastructure**. Review authentication, authorization, rate limiting, HTTPS, reverse-proxy configuration, backups, and secret management before exposing an instance to untrusted public traffic.
 
 ## Development commands
 
@@ -323,7 +370,7 @@ The Socket.IO service has its own package and development commands under `mini-s
 
 ### Real-time synchronization is not working
 
-Make sure the Socket.IO sync service is running and reachable from the browser. In the default local setup it runs on port `3002`.
+Make sure the Socket.IO sync service is running and reachable from the browser. In the default local setup it runs on port `3002`. In the hosted deployment, the frontend should point to the Render sync-service URL through `NEXT_PUBLIC_SYNC_URL`.
 
 ### Database initialization errors
 
@@ -346,7 +393,7 @@ Check which process is using ports `3000` and `3002`, or update the relevant loc
 | [`SETUP.md`](./SETUP.md) | Detailed local development setup and troubleshooting |
 | [`DEPLOYMENT.md`](./DEPLOYMENT.md) | Cloud, VPS, Docker, and deployment guidance |
 | [`Caddyfile`](./Caddyfile) | Reverse-proxy configuration |
-| [`docker-compose.yml`](./docker-compose.yml) | Containerized app + PostgreSQL stack |
+| [`docker-compose.yml`](./docker-compose.yml) | Containerized app + PostgreSQL self-hosted stack |
 
 ## Contributing
 
