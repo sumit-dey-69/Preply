@@ -1,39 +1,39 @@
 "use client";
 
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { setDisplayName } from "@/lib/participant";
-import { addRecentRoom, loadRecentRooms, removeRecentRoom, type RecentRoom } from "@/lib/recent-rooms";
 import {
-    ArrowRight,
-    Clock,
-    FileText,
-    Github,
-    Hash,
-    Loader2,
-    MousePointerClick,
-    Radio,
-    ShieldCheck,
-    Sparkles,
-    Timer,
-    Users,
-    X,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { ensureLocalParticipant, setDisplayName } from "@/lib/participant";
+import { loadRecentRooms, removeRecentRoom, addRecentRoom, type RecentRoom } from "@/lib/recent-rooms";
+import {
+  FileText,
+  Radio,
+  Users,
+  Timer,
+  MousePointerClick,
+  Github,
+  Sparkles,
+  ArrowRight,
+  Hash,
+  ShieldCheck,
+  Loader2,
+  Clock,
+  X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const FEATURES = [
   {
