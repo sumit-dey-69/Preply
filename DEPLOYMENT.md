@@ -1,6 +1,6 @@
-# Preply — Deployment & Hosting Guide
+# LivePDF Room — Deployment & Hosting Guide
 
-Complete guide to host Preply on **Vercel**, a **local machine**, or a **VPS/Docker**.
+Complete guide to host LivePDF Room on **Vercel**, a **local machine**, or a **VPS/Docker**.
 
 ---
 
@@ -17,7 +17,7 @@ Complete guide to host Preply on **Vercel**, a **local machine**, or a **VPS/Doc
 
 ## 1. Architecture Overview
 
-Preply has **3 components** that must all be running:
+LivePDF Room has **3 components** that must all be running:
 
 ```
 ┌─────────────────────────────────────────────────┐

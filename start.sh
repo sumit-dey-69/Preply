@@ -1,5 +1,5 @@
 #!/bin/sh
-# Preply — container entrypoint.
+# LivePDF Room — container entrypoint.
 # Runs the Socket.IO sync service and the Next.js server in ONE container.
 # Database tables are created here (at runtime, where DATABASE_URL is available).
 set -e

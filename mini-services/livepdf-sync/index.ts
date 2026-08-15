@@ -1,4 +1,4 @@
-// Preply — Real-time sync service (Socket.IO)
+// LivePDF Room — Real-time sync service (Socket.IO)
 // Port: 3002 (exposed via Caddy gateway using ?XTransformPort=3002)
 //
 // Responsibilities:
@@ -12,26 +12,26 @@
 
 import { createServer } from "http";
 import { Server } from "socket.io";
-import type {
-    Annotation,
-    AnnotationColor,
-    AnnotationTool,
-    ChatMessage,
-    ClientToServerEvents,
-    MarkerColor,
-    Participant,
-    QuestionMarker,
-    RoomPdfMeta,
-    RoomState,
-    ServerToClientEvents,
-    SharedNote,
-    TimerState,
-    ViewerState,
-} from "../../src/lib/types.js";
 import {
-    computeElapsedMs,
-    emptyTimerState,
-    emptyViewerState,
+  emptyTimerState,
+  emptyViewerState,
+  computeElapsedMs,
+} from "../../src/lib/types.js";
+import type {
+  ClientToServerEvents,
+  ServerToClientEvents,
+  Participant,
+  RoomState,
+  TimerState,
+  ViewerState,
+  RoomPdfMeta,
+  ChatMessage,
+  QuestionMarker,
+  MarkerColor,
+  SharedNote,
+  Annotation,
+  AnnotationTool,
+  AnnotationColor,
 } from "../../src/lib/types.js";
 
 interface RoomRuntime {

@@ -1,4 +1,4 @@
-# Preply — Docker Compose
+# LivePDF Room — Docker Compose
 # One app container (Next.js + API + Socket.IO) + one PostgreSQL container.
 # Usage: docker compose up --build
 services:

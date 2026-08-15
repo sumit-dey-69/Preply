@@ -1,4 +1,4 @@
-# Preply
+# LivePDF Room
 
 A real-time collaborative PDF study room. Two or more students join a shared room (by code or link), upload PDFs, and view the same document with synchronized **page / scroll / zoom / rotation**, a shared **server-authoritative stopwatch & countdown**, live **presence**, and an optional **presenter mode**.
 

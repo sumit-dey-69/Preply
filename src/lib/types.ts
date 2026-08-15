@@ -1,4 +1,4 @@
-// Shared types for Preply — mirrored on the socket server (mini-service).
+// Shared types for LivePDF Room — mirrored on the socket server (mini-service).
 
 export type TimerMode = "stopwatch" | "countdown";
 export type TimerStatus = "idle" | "running" | "paused" | "finished";
