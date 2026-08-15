@@ -1,5 +1,5 @@
 #!/bin/sh
-# LivePDF Room — container entrypoint.
+# Preply — container entrypoint.
 # Runs the Socket.IO sync service and the Next.js server in ONE container.
 set -e
 

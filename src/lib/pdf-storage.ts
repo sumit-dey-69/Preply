@@ -3,11 +3,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { sanitizeFilename } from "./validation";
 
-// On Vercel/serverless, use /tmp (the only writable directory).
-// On local/Docker, use a local storage folder.
-const STORAGE_DIR = process.env.VERCEL
-  ? path.join("/tmp", "storage", "pdfs")
-  : path.join(process.cwd(), "storage", "pdfs");
+const STORAGE_DIR = path.join(process.cwd(), "storage", "pdfs");
 
 export async function ensureStorageDir(): Promise<string> {
   await fs.mkdir(STORAGE_DIR, { recursive: true });
