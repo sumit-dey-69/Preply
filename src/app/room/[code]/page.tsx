@@ -72,19 +72,21 @@ export default function RoomPage() {
     (async () => {
       try {
         const res = await fetch(`/api/rooms/${code}`);
-        if (!cancelled && res.status === 401) {
-          const data = await res.json();
-          if (data.locked) {
-            setStatus("locked");
-            return;
-          }
+        // Always try to parse JSON, even on error responses
+        const data = await res.json().catch(() => ({}));
+
+        if (cancelled) return;
+
+        if (res.status === 401 && data.locked) {
+          setStatus("locked");
+          return;
         }
-        if (!cancelled && !res.ok) {
+
+        if (!res.ok) {
           setStatus("not_found");
           return;
         }
-        if (cancelled) return;
-        const data = await res.json();
+
         setRoom(data.room);
         const local = loadLocalParticipant();
         if (!local || !local.displayName || local.displayName.startsWith("Guest-")) {
