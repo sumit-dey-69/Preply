@@ -1,4 +1,4 @@
-// LivePDF Room — Prisma schema
+// Preply — Prisma schema
 // NOTE: The runtime sandbox uses SQLite. The Docker reference deployment uses PostgreSQL.
 // The provider is driven by the DATABASE_URL env var pattern. For the sandbox we keep SQLite.
 

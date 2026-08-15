@@ -1,4 +1,4 @@
-# LivePDF Room — Project Worklog
+# Preply — Project Worklog
 
 ## Bugfix — Zoom Not Working: emitZoom Blocked by Socket Check (current)
 
@@ -1083,7 +1083,7 @@ Screenshots: `qa-v2-room.png`, `qa-v2-chat-A.png`, `qa-v2-chat-B.png`,
 
 ## Project Status
 
-**LivePDF Room** is a real-time collaborative PDF study room. Two or more students
+**Preply** is a real-time collaborative PDF study room. Two or more students
 join a shared room (by code or link), upload PDFs, and view the same document with
 synchronized page / scroll / zoom, a shared server-authoritative stopwatch &
 countdown, live presence, and an optional presenter mode.
