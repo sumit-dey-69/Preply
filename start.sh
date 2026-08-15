@@ -1,12 +1,11 @@
 #!/bin/sh
 # LivePDF Room — container entrypoint.
 # Runs the Socket.IO sync service and the Next.js server in ONE container.
+# Database tables are created here (at runtime, where DATABASE_URL is available).
 set -e
 
 echo "[entrypoint] applying database schema..."
-# In Docker we use PostgreSQL (provider swapped to postgresql in Dockerfile).
-# Use npx (node), not bunx, since the container is node:20-slim.
-npx prisma db push --accept-data-loss
+npx prisma db push --accept-data-loss || echo "[entrypoint] WARNING: db push failed, continuing anyway..."
 
 echo "[entrypoint] starting sync service (Socket.IO, port 3002)..."
 cd /app/mini-services/livepdf-sync

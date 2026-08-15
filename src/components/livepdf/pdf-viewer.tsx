@@ -191,7 +191,7 @@ export function PdfViewer() {
     setNumPages(0);
   }, []);
 
-  // --- apply remote scroll (viewer.scrollY is a 0..1 ratio) ---
+  // --- apply remote scroll (viewer.scrollY/scrollX are 0..1 ratios) ---
   // Only when the last change was an explicit scroll event from someone else.
   useEffect(() => {
     if (viewer.kind !== "scroll") return;
@@ -199,14 +199,20 @@ export function PdfViewer() {
     const scrollEl = scrollRef.current;
     if (!scrollEl) return;
     applyingRemoteRef.current = true;
-    const max = scrollEl.scrollHeight - scrollEl.clientHeight;
-    scrollEl.scrollTop = viewer.scrollY * Math.max(max, 1);
+    // Apply vertical scroll
+    const maxY = scrollEl.scrollHeight - scrollEl.clientHeight;
+    scrollEl.scrollTop = (viewer.scrollY || 0) * Math.max(maxY, 1);
+    // Apply horizontal scroll (when zoomed in wider than viewport)
+    const maxX = scrollEl.scrollWidth - scrollEl.clientWidth;
+    if (maxX > 0) {
+      scrollEl.scrollLeft = (viewer.scrollX || 0) * maxX;
+    }
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         applyingRemoteRef.current = false;
       });
     });
-  }, [viewer.scrollY, viewer.kind, viewer.changedAt, sync.me?.sessionId]);
+  }, [viewer.scrollY, viewer.scrollX, viewer.kind, viewer.changedAt, sync.me?.sessionId]);
 
   // --- apply remote page change (explicit page nav, not scroll-induced) ---
   useEffect(() => {
@@ -272,9 +278,19 @@ export function PdfViewer() {
   const changeZoom = (delta: number) => {
     // Always allow zoom (works even if socket is briefly down — local state updates)
     sync.emitZoom(clampZoom((viewer.zoom || 1) + delta));
+    // After zoom changes, emit scroll position so the other user follows
+    setTimeout(() => {
+      const state = computeScrollState();
+      if (state) sync.emitScroll(state.x, state.y, state.page);
+    }, 150);
   };
   const setZoom = (z: number) => {
     sync.emitZoom(clampZoom(z));
+    // After zoom changes, emit scroll position so the other user follows
+    setTimeout(() => {
+      const state = computeScrollState();
+      if (state) sync.emitScroll(state.x, state.y, state.page);
+    }, 150);
   };
 
   // --- Ctrl/Cmd + wheel = zoom (desktop standard + trackpad pinch) ---
@@ -284,16 +300,17 @@ export function PdfViewer() {
   currentZoomRef.current = zoom;
   const emitZoomRef = useRef(sync.emitZoom);
   emitZoomRef.current = sync.emitZoom;
+  const emitScrollRef = useRef(sync.emitScroll);
+  emitScrollRef.current = sync.emitScroll;
+  const computeScrollStateRef = useRef(computeScrollState);
+  computeScrollStateRef.current = computeScrollState;
   const pdfIdRef = useRef(viewer.pdfId);
   pdfIdRef.current = viewer.pdfId;
 
   useEffect(() => {
     if (!pdfUrl) return;
     const handler = (e: WheelEvent) => {
-      // Only intercept when Ctrl/Cmd is held (pinch-zoom on trackpad fires
-      // wheel events with ctrlKey=true).
       if (!(e.ctrlKey || e.metaKey)) return;
-      // Only zoom if the cursor is over the PDF scroll area
       const el = scrollRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
@@ -301,20 +318,23 @@ export function PdfViewer() {
         e.clientX >= rect.left && e.clientX <= rect.right &&
         e.clientY >= rect.top && e.clientY <= rect.bottom;
       if (!overPdf) return;
-      // Prevent the browser's native page zoom / pinch magnification
       e.preventDefault();
       e.stopImmediatePropagation();
       if (!pdfIdRef.current) return;
       const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
       const newZoom = clampZoom((currentZoomRef.current || 1) + delta);
       emitZoomRef.current(newZoom);
+      // After zoom, emit scroll position so the other user follows
+      setTimeout(() => {
+        const state = computeScrollStateRef.current();
+        if (state) emitScrollRef.current(state.x, state.y, state.page);
+      }, 150);
     };
-    // Use capture: true so we get the event before the browser's default action
     document.addEventListener("wheel", handler, { passive: false, capture: true });
     return () => {
       document.removeEventListener("wheel", handler, { capture: true } as any);
     };
-  }, [pdfUrl]);
+  }, [pdfUrl, computeScrollState]);
 
   const rotate = () => {
     if (!canControl) return;

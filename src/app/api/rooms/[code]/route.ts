@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ code: strin
 
   // If the room has a password, require it via ?password= query (or X-Password header)
   if (room.passwordHash) {
-    const url = new URL(req.url);
+    const url = new URL(req.url, "http://localhost");
     const provided = url.searchParams.get("password") || req.headers.get("x-room-password") || "";
     if (!verifyPassword(provided, room.passwordHash)) {
       return NextResponse.json(
